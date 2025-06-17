@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Timer</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .timer {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #333;
+        }
+        
+        .status {
+            font-size: 18px;
+            margin: 10px 0;
+            color: #666;
+        }
+        
+        .building {
+            font-size: 16px;
+            line-height: 1.2;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            white-space: pre;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            font-size: 16px;
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .stats {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Building Timer</h1>
+        
+        <div class="timer" id="timer">25:00</div>
+        <div class="status" id="status">Ready to start work session</div>
+        
+        <div class="building" id="building">_____________________</div>
+        
+        <div class="controls">
+            <button id="startBtn" onclick="startSession()">Start Work Session</button>
+            <button id="pauseBtn" onclick="pauseSession()" disabled>Pause</button>
+            <button id="skipBtn" onclick="skipSession()" disabled>Skip Session</button>
+        </div>
+        
+        <div class="stats">
+            <div>Floors: <span id="floors">0</span></div>
+            <div>Sessions until long break: <span id="sessionsLeft">4</span></div>
+        </div>
+    </div>
+
+    <script>
+        let timer = null;
+        let timeLeft = 25 * 60; // 25 minutes in seconds
+        let isWorkSession = true;
+        let floors = 0;
+        let sessionsCompleted = 0;
+        let isPaused = false;
+
+        const WORK_TIME = 25 * 60;
+        const SHORT_BREAK = 5 * 60;
+        const LONG_BREAK = 15 * 60;
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            document.getElementById('floors').textContent = floors;
+            document.getElementById('sessionsLeft').textContent = 4 - (sessionsCompleted % 4);
+            
+            updateBuilding();
+        }
+
+        function updateBuilding() {
+            let building = '';
+            for (let i = floors; i > 0; i--) {
+                building += '|===|\n';
+            }
+            building += '_____________________';
+            document.getElementById('building').textContent = building;
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function startSession() {
+            if (isPaused) {
+                isPaused = false;
+            } else {
+                timeLeft = isWorkSession ? WORK_TIME : 
+                          (sessionsCompleted % 4 === 0 && sessionsCompleted > 0) ? LONG_BREAK : SHORT_BREAK;
+            }
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                
+                if (timeLeft <= 0) {
+                    completeSession();
+                }
+            }, 1000);
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('skipBtn').disabled = false;
+            
+            updateStatus(isWorkSession ? 'Work session in progress...' : 'Break time!');
+        }
+
+        function pauseSession() {
+            clearInterval(timer);
+            isPaused = true;
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = 'Resume';
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('skipBtn').disabled = true;
+            
+            updateStatus('Paused');
+        }
+
+        function skipSession() {
+            clearInterval(timer);
+            
+            if (isWorkSession) {
+                // Earthquake! Lose a floor
+                if (floors > 0) {
+                    floors--;
+                    updateStatus('Session skipped! Earthquake hit - lost a floor!');
+                } else {
+                    updateStatus('Session skipped!');
+                }
+            }
+            
+            resetSession();
+        }
+
+        function completeSession() {
+            clearInterval(timer);
+            
+            if (isWorkSession) {
+                floors++;
+                sessionsCompleted++;
+                updateStatus('Work session complete! Floor added!');
+            } else {
+                updateStatus('Break complete!');
+            }
+            
+            // Toggle between work and break
+            isWorkSession = !isWorkSession;
+            
+            resetSession();
+        }
+
+        function resetSession() {
+            isPaused = false;
+            timeLeft = isWorkSession ? WORK_TIME : 
+                      (sessionsCompleted % 4 === 0 && sessionsCompleted > 0) ? LONG_BREAK : SHORT_BREAK;
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = isWorkSession ? 'Start Work Session' : 'Start Break';
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('skipBtn').disabled = true;
+            
+            updateDisplay();
+        }
+
+        // Initialize display
+        updateDisplay();
+    </script>
+</body>
+</html>
